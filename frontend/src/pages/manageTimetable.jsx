@@ -1,8 +1,6 @@
-<<<<<<< HEAD
-import { useState} from 'react';
-=======
+
 import { useState } from 'react';
->>>>>>> d011fe8753333c8cde9d881c3c57d05a506bd1bc
+
 import {
   Box,
   Typography,
@@ -14,23 +12,19 @@ import {
 } from '@mui/material';
 import { Schedule, Add, AutoFixHigh } from '@mui/icons-material';
 import { apiClient } from '../services/api';
-<<<<<<< HEAD
-import TimetableEditor from '../components/timetableEditor';
-=======
-import TimetableEditor from '../components/TimetableEditor';
 
->>>>>>> d011fe8753333c8cde9d881c3c57d05a506bd1bc
+import TimetableEditor from './components/TimetableEditor';
+
+
 const ManageTimetable = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pageError, setPageError] = useState('');
-<<<<<<< HEAD
-  const [refreshKey, setRefreshKey] =useState(0);
-=======
+
   const [refreshKey, setRefreshKey] = useState(0);
 
->>>>>>> d011fe8753333c8cde9d881c3c57d05a506bd1bc
+
   const handleGenerateTimetable = async () => {
     setLoading(true);
     setError('');
@@ -51,11 +45,9 @@ const ManageTimetable = () => {
           schedule: response.data.schedule
         });
         setSuccess(`Timetable generated successfully! ${response.data.totalSlots} slots created.`);
-<<<<<<< HEAD
-        setRefreshKey((k)=>k+1);
-=======
+
         setRefreshKey((k) => k + 1);
->>>>>>> d011fe8753333c8cde9d881c3c57d05a506bd1bc
+
       } else {
         setError('No timetable slots could be generated. Please check constraints.');
       }
@@ -142,17 +134,12 @@ const ManageTimetable = () => {
               <Schedule sx={{ mr: 1 }} />
               Current Timetable
             </Typography>
-<<<<<<< HEAD
-            <Typography variant="body2" color="textSecondary" sx={{mb: 2}}>
-              Edit individual timetable entries below.
-            </Typography>
-            <TimetableEditor refreshKey={refreshKey}/>
-=======
+
             <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
               Edit individual timetable entries below.
             </Typography>
             <TimetableEditor refreshKey={refreshKey} />
->>>>>>> d011fe8753333c8cde9d881c3c57d05a506bd1bc
+
           </Paper>
         </Grid>
       </Grid>
