@@ -6,6 +6,14 @@ const {authenticateToken, authorizeRoles} = require('../middleware/auth');
 
 classroomRouter.post("/", authenticateToken, authorizeRoles('admin'), async (req, res) => {
     try {
+        const timeSlotSchema = z.object({
+            start: z.string(),
+            end: z.string()
+        });
+        const daySlotSchema = z.object({
+            day: z.enum(['monday','tuesday','wednesday','thursday','friday','saturday']),
+            slots: z.array(timeSlotSchema)
+        });
         const classroomSchema = z.object({
             name: z.string().min(2).max(50),
             roomNumber: z.string().min(1).max(20),
@@ -14,7 +22,9 @@ classroomRouter.post("/", authenticateToken, authorizeRoles('admin'), async (req
             capacity: z.number().min(1).max(500),
             type: z.enum(['lecture', 'lab', 'seminar', 'auditorium']).default('lecture'),
             facilities: z.array(z.string()).optional(),
-            department: z.string().optional()
+            department: z.string().optional(),
+            availability: z.array(daySlotSchema).optional(),
+            blackoutPeriods: z.array(daySlotSchema).optional()
         });
 
         const parsedBody = classroomSchema.safeParse(req.body);
@@ -84,7 +94,7 @@ classroomRouter.get("/:id", authenticateToken, async (req, res) => {
 
 classroomRouter.put("/:id", authenticateToken, authorizeRoles('admin'), async (req, res) => {
     try {
-        const allowedUpdates = ['name', 'capacity', 'facilities', 'isAvailable', 'department'];
+        const allowedUpdates = ['name', 'capacity', 'facilities', 'isAvailable', 'department', 'availability', 'blackoutPeriods'];
         const updates = {};
 
         Object.keys(req.body).forEach(key => {

@@ -10,6 +10,18 @@ const classroomSchema=new mongoose.Schema({
     facilities:[{type:String}],
     department:{type:String},
     isAvailable:{type:Boolean,default:true},
+    availability:[
+        {
+            day:{type:String, enum:['monday','tuesday','wednesday','thursday','friday','saturday']},
+            slots:[{ start:{type:String}, end:{type:String} }]
+        }
+    ],
+    blackoutPeriods:[
+        {
+            day:{type:String, enum:['monday','tuesday','wednesday','thursday','friday','saturday']},
+            slots:[{ start:{type:String}, end:{type:String} }]
+        }
+    ],
     isActive:{type:Boolean,default:true},
     createdAt:{type:Date,default:Date.now},
     updatedAt:{type:Date,default:Date.now}

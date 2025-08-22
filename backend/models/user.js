@@ -19,6 +19,15 @@ const userSchema=new mongoose.Schema({
             }]
         }
     ],
+    blackoutPeriods:[
+        {
+            day:{type:String, enum:['monday','tuesday','wednesday','thursday','friday','saturday']},
+            slots:[{
+                start:{type:String},
+                end:{type:String}
+            }]
+        }
+    ],
     subjects:[{type:mongoose.Schema.Types.ObjectId, ref:'Course'}],
     isActive:{type:Boolean, default:true},
     createdAt:{type:Date,default:Date.now},

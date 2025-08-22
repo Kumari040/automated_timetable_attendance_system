@@ -11,6 +11,18 @@ const studentGroupSchema=new mongoose.Schema({
     students:[{type:mongoose.Schema.Types.ObjectId, ref:'Student'}],
     courses:[{type:mongoose.Schema.Types.ObjectId, ref:'Course'}],
     classRepresentative:{type:mongoose.Schema.Types.ObjectId, ref:'Student'},
+    availability:[
+        {
+            day:{type:String, enum:['monday','tuesday','wednesday','thursday','friday','saturday']},
+            slots:[{ start:{type:String}, end:{type:String} }]
+        }
+    ],
+    blackoutPeriods:[
+        {
+            day:{type:String, enum:['monday','tuesday','wednesday','thursday','friday','saturday']},
+            slots:[{ start:{type:String}, end:{type:String} }]
+        }
+    ],
     isActive:{type:Boolean,default:true},
     createdAt:{type:Date,default:Date.now},
     updatedAt:{type:Date,default:Date.now}

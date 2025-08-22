@@ -168,7 +168,7 @@ authRouter.get("/profile", authenticateToken, async function(req,res){
 
 authRouter.put("/profile", authenticateToken, async function(req,res){
     try{
-        const allowedUpdates = ['name', 'phone', 'availability'];
+        const allowedUpdates = ['name', 'phone', 'availability', 'blackoutPeriods'];
         const updates = {};
         
         Object.keys(req.body).forEach(key => {
@@ -189,6 +189,36 @@ authRouter.put("/profile", authenticateToken, async function(req,res){
         });
     }catch(error){
         res.status(500).json({message:"Error updating profile"});
+    }
+});
+
+authRouter.put("/users/:id", authenticateToken, authorizeRoles('admin'), async function(req,res){
+    try{
+        const allowedUpdates = ['name', 'phone', 'availability', 'blackoutPeriods'];
+        const updates = {};
+
+        Object.keys(req.body).forEach(key => {
+            if(allowedUpdates.includes(key)){
+                updates[key] = req.body[key];
+            }
+        });
+
+        const updatedUser = await userModel.findByIdAndUpdate(
+            req.params.id,
+            updates,
+            {new: true, select: '-passwordHash'}
+        );
+
+        if(!updatedUser){
+            return res.status(404).json({message: "User not found"});
+        }
+
+        res.json({
+            message: "User updated successfully",
+            user: updatedUser
+        });
+    }catch(error){
+        res.status(500).json({message:"Error updating user"});
     }
 });
 
