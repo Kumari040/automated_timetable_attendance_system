@@ -134,4 +134,3 @@ const TimetableEditor = ({ refreshKey }) => {
 };
 
 export default TimetableEditor;
-

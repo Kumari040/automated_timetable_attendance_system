@@ -13,7 +13,7 @@ import {
 import { Schedule, Add, AutoFixHigh } from '@mui/icons-material';
 import { apiClient } from '../services/api';
 
-import TimetableEditor from './components/TimetableEditor';
+import TimetableEditor from '../components/timetableEditor';
 
 
 const ManageTimetable = () => {
