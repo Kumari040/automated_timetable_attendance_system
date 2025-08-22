@@ -29,6 +29,13 @@ const ManageTimetable = () => {
 
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const [generateForm, setGenerateForm] = useState({
+    semester: '',
+    academicYear: '',
+    department: ''
+  });
+  const [generateErrors, setGenerateErrors] = useState({});
+
   const [availabilityForm, setAvailabilityForm] = useState({
     entityType: 'teacher',
     entityId: '',
@@ -40,6 +47,12 @@ const ManageTimetable = () => {
 
   const handleAvailabilityChange = (e) => {
     setAvailabilityForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleGenerateChange = (e) => {
+    const { name, value } = e.target;
+    setGenerateForm((prev) => ({ ...prev, [name]: value }));
+    setGenerateErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleSaveAvailability = async () => {
@@ -71,16 +84,32 @@ const ManageTimetable = () => {
     setLoading(true);
     setError('');
     setSuccess('');
-    
+
+    const errors = {};
+    if (!generateForm.semester || isNaN(generateForm.semester)) {
+      errors.semester = 'Valid semester is required';
+    }
+    if (!generateForm.academicYear || !/^\d{4}-\d{2}$/.test(generateForm.academicYear)) {
+      errors.academicYear = 'Academic year must be in YYYY-YY format';
+    }
+    if (!generateForm.department.trim()) {
+      errors.department = 'Department is required';
+    }
+    if (Object.keys(errors).length) {
+      setGenerateErrors(errors);
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await apiClient.get('/timetable/generate', {
         params: {
-          semester: 5,
-          academicYear: '2024-25',
-          department: 'Computer Science'
+          semester: Number(generateForm.semester),
+          academicYear: generateForm.academicYear,
+          department: generateForm.department
         }
       });
-      
+
       if (response.data.schedule?.length > 0) {
         // Save the generated timetable
         await apiClient.post('/timetable/generate/save', {
@@ -141,6 +170,37 @@ const ManageTimetable = () => {
             <Typography variant="body2" color="textSecondary" paragraph>
               Automatically generate a conflict-free timetable based on courses, faculty availability, and classroom constraints.
             </Typography>
+            <TextField
+              label="Semester"
+              name="semester"
+              type="number"
+              fullWidth
+              sx={{ mb: 2 }}
+              value={generateForm.semester}
+              onChange={handleGenerateChange}
+              error={!!generateErrors.semester}
+              helperText={generateErrors.semester}
+            />
+            <TextField
+              label="Academic Year"
+              name="academicYear"
+              fullWidth
+              sx={{ mb: 2 }}
+              value={generateForm.academicYear}
+              onChange={handleGenerateChange}
+              error={!!generateErrors.academicYear}
+              helperText={generateErrors.academicYear}
+            />
+            <TextField
+              label="Department"
+              name="department"
+              fullWidth
+              sx={{ mb: 2 }}
+              value={generateForm.department}
+              onChange={handleGenerateChange}
+              error={!!generateErrors.department}
+              helperText={generateErrors.department}
+            />
             <Button
               variant="contained"
               onClick={handleGenerateTimetable}
