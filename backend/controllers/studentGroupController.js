@@ -8,13 +8,23 @@ const {authenticateToken, authorizeRoles} = require('../middleware/auth');
 
 studentGroupRouter.post("/", authenticateToken, authorizeRoles('admin'), async (req, res) => {
     try {
+        const timeSlotSchema = z.object({
+            start: z.string(),
+            end: z.string()
+        });
+        const daySlotSchema = z.object({
+            day: z.enum(['monday','tuesday','wednesday','thursday','friday','saturday']),
+            slots: z.array(timeSlotSchema)
+        });
         const studentGroupSchema = z.object({
             name: z.string().min(2).max(100),
             department: z.string().min(2).max(50),
             semester: z.number().min(1).max(8),
             year: z.number().min(1).max(5),
             section: z.string().min(1).max(10),
-            maxSize: z.number().min(1).max(100).default(60)
+            maxSize: z.number().min(1).max(100).default(60),
+            availability: z.array(daySlotSchema).optional(),
+            blackoutPeriods: z.array(daySlotSchema).optional()
         });
 
         const parsedBody = studentGroupSchema.safeParse(req.body);
@@ -165,7 +175,7 @@ studentGroupRouter.delete("/:id/students/:studentId", authenticateToken, authori
 
 studentGroupRouter.put("/:id", authenticateToken, authorizeRoles('admin'), async (req, res) => {
     try {
-        const allowedUpdates = ['name', 'maxSize', 'classRepresentative'];
+        const allowedUpdates = ['name', 'maxSize', 'classRepresentative', 'availability', 'blackoutPeriods'];
         const updates = {};
 
         Object.keys(req.body).forEach(key => {

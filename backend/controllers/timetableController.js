@@ -25,6 +25,30 @@ const isTimeConflict = (startTime1, endTime1, startTime2, endTime2) => {
     return (start1 < end2 && start2 < end1);
 };
 
+const isWithinAvailability = (entity, day, startTime, endTime) => {
+    if (!entity) return true;
+
+    if (entity.blackoutPeriods && entity.blackoutPeriods.length > 0) {
+        const blackout = entity.blackoutPeriods.find(b => b.day === day);
+        if (blackout) {
+            for (const slot of blackout.slots) {
+                if (isTimeConflict(startTime, endTime, slot.start, slot.end)) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    if (entity.availability && entity.availability.length > 0) {
+        const availability = entity.availability.find(a => a.day === day);
+        if (!availability) return false;
+        const within = availability.slots.some(slot => startTime >= slot.start && endTime <= slot.end);
+        if (!within) return false;
+    }
+
+    return true;
+};
+
 const checkConflicts = async (
     courseId,
     studentGroupId,
@@ -34,7 +58,8 @@ const checkConflicts = async (
     startTime,
     endTime,
     excludeTimetableId = null,
-    pendingSchedule = []
+    pendingSchedule = [],
+    entities = {}
 ) => {
     const conflicts = [];
 
@@ -92,6 +117,21 @@ const checkConflicts = async (
         }
     }
 
+    const { teacher, classroom, studentGroup } = entities;
+
+    if (teacher && !isWithinAvailability(teacher, day, startTime, endTime)) {
+        const name = teacher.name ? ` ${teacher.name}` : '';
+        conflicts.push(`Teacher${name} is not available at this time`);
+    }
+    if (classroom && !isWithinAvailability(classroom, day, startTime, endTime)) {
+        const name = classroom.name ? ` ${classroom.name}` : '';
+        conflicts.push(`Classroom${name} is not available at this time`);
+    }
+    if (studentGroup && !isWithinAvailability(studentGroup, day, startTime, endTime)) {
+        const name = studentGroup.name ? ` ${studentGroup.name}` : '';
+        conflicts.push(`Student group${name} is not available at this time`);
+    }
+
     return conflicts;
 };
 
@@ -142,7 +182,18 @@ timetableRouter.post("/", authenticateToken, authorizeRoles('admin'), async (req
             return res.status(400).json({message: "Assigned teacher must be faculty"});
         }
 
-        const conflicts = await checkConflicts(courseId, studentGroupId, classroomId, teacherId, day, startTime, endTime);
+        const conflicts = await checkConflicts(
+            courseId,
+            studentGroupId,
+            classroomId,
+            teacherId,
+            day,
+            startTime,
+            endTime,
+            null,
+            [],
+            { teacher, classroom, studentGroup }
+        );
         if (conflicts.length > 0) {
             return res.status(409).json({
                 message: "Scheduling conflicts detected",
@@ -248,7 +299,8 @@ timetableRouter.get("/generate", authenticateToken, authorizeRoles('admin'), asy
                                         startTime,
                                         endTime,
                                         null,
-                                        generatedSchedule
+                                        generatedSchedule,
+                                        { teacher: course.teacherId, classroom, studentGroup }
                                     );
                                     
                                     if (conflicts.length === 0) {
@@ -335,6 +387,11 @@ timetableRouter.put("/:id", authenticateToken, authorizeRoles('admin'), async (r
         }
 
         if (updates.day || updates.startTime || updates.classroomId) {
+            const [teacher, classroom, studentGroup] = await Promise.all([
+                userModel.findById(existingEntry.teacherId),
+                Classroom.findById(updates.classroomId || existingEntry.classroomId),
+                StudentGroup.findById(existingEntry.studentGroupId)
+            ]);
             const conflicts = await checkConflicts(
                 existingEntry.courseId,
                 existingEntry.studentGroupId,
@@ -343,7 +400,9 @@ timetableRouter.put("/:id", authenticateToken, authorizeRoles('admin'), async (r
                 updates.day || existingEntry.day,
                 updates.startTime || existingEntry.startTime,
                 updates.endTime || existingEntry.endTime,
-                req.params.id
+                req.params.id,
+                [],
+                { teacher, classroom, studentGroup }
             );
 
             if (conflicts.length > 0) {

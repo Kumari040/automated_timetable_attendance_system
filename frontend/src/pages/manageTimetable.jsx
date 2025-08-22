@@ -8,7 +8,12 @@ import {
   Paper,
   Grid,
   Alert,
-  CircularProgress
+  CircularProgress,
+  TextField,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material';
 import { Schedule, Add, AutoFixHigh } from '@mui/icons-material';
 import { apiClient } from '../services/api';
@@ -23,6 +28,43 @@ const ManageTimetable = () => {
   const [pageError, setPageError] = useState('');
 
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const [availabilityForm, setAvailabilityForm] = useState({
+    entityType: 'teacher',
+    entityId: '',
+    day: 'monday',
+    start: '09:00',
+    end: '10:00',
+    type: 'availability'
+  });
+
+  const handleAvailabilityChange = (e) => {
+    setAvailabilityForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSaveAvailability = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const { entityType, entityId, day, start, end, type } = availabilityForm;
+      const pathMap = {
+        teacher: '/auth/users',
+        classroom: '/classrooms',
+        studentGroup: '/student-groups'
+      };
+      const field = type === 'blackout' ? 'blackoutPeriods' : 'availability';
+      const payload = {};
+      payload[field] = [{ day, slots: [{ start, end }] }];
+      await apiClient.put(`${pathMap[entityType]}/${entityId}`, payload);
+      setSuccess('Availability updated successfully');
+    } catch (err) {
+      console.error('Availability update error:', err);
+      setError(err.response?.data?.message || 'Failed to update availability');
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   const handleGenerateTimetable = async () => {
@@ -124,6 +166,90 @@ const ManageTimetable = () => {
               startIcon={<Add />}
             >
               Add Manual Entry
+            </Button>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Availability Settings
+            </Typography>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="entityType-label">Entity</InputLabel>
+              <Select
+                labelId="entityType-label"
+                label="Entity"
+                name="entityType"
+                value={availabilityForm.entityType}
+                onChange={handleAvailabilityChange}
+              >
+                <MenuItem value="teacher">Teacher</MenuItem>
+                <MenuItem value="classroom">Classroom</MenuItem>
+                <MenuItem value="studentGroup">Student Group</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="Entity ID"
+              name="entityId"
+              fullWidth
+              sx={{ mb: 2 }}
+              value={availabilityForm.entityId}
+              onChange={handleAvailabilityChange}
+            />
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="day-label">Day</InputLabel>
+              <Select
+                labelId="day-label"
+                label="Day"
+                name="day"
+                value={availabilityForm.day}
+                onChange={handleAvailabilityChange}
+              >
+                {['monday','tuesday','wednesday','thursday','friday','saturday'].map(d => (
+                  <MenuItem key={d} value={d}>{d.charAt(0).toUpperCase()+d.slice(1)}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={6}>
+                <TextField
+                  label="Start"
+                  type="time"
+                  name="start"
+                  fullWidth
+                  value={availabilityForm.start}
+                  onChange={handleAvailabilityChange}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="End"
+                  type="time"
+                  name="end"
+                  fullWidth
+                  value={availabilityForm.end}
+                  onChange={handleAvailabilityChange}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="type-label">Type</InputLabel>
+              <Select
+                labelId="type-label"
+                label="Type"
+                name="type"
+                value={availabilityForm.type}
+                onChange={handleAvailabilityChange}
+              >
+                <MenuItem value="availability">Available</MenuItem>
+                <MenuItem value="blackout">Blackout</MenuItem>
+              </Select>
+            </FormControl>
+            <Button variant="contained" onClick={handleSaveAvailability} disabled={loading}>
+              Save
             </Button>
           </Paper>
         </Grid>
