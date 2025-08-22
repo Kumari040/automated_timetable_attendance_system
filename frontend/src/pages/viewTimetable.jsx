@@ -53,7 +53,7 @@ const ViewTimetable = () => {
       if (user.role === 'faculty') {
         params.teacherId = user.id;
       } else if (user.role === 'student') {
-        // Student group would be fetched from user profile
+        params.studentGroupId = user.studentGroupId;
       }
 
       const response = await apiClient.get('/timetable', { params });

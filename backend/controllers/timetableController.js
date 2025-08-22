@@ -227,7 +227,6 @@ timetableRouter.get("/", authenticateToken, async (req, res) => {
         const { studentGroupId, teacherId, classroomId, day, semester, academicYear } = req.query;
         const filter = {};
 
-        if (studentGroupId) filter.studentGroupId = studentGroupId;
         if (teacherId) filter.teacherId = teacherId;
         if (classroomId) filter.classroomId = classroomId;
         if (day) filter.day = day;
@@ -236,11 +235,23 @@ timetableRouter.get("/", authenticateToken, async (req, res) => {
 
         if (req.user.role === 'faculty') {
             filter.teacherId = req.user._id;
+            if (studentGroupId) filter.studentGroupId = studentGroupId;
         } else if (req.user.role === 'student') {
             const studentGroups = await StudentGroup.find({
                 students: req.user._id
             });
-            filter.studentGroupId = { $in: studentGroups.map(sg => sg._id) };
+            const allowedGroupIds = studentGroups.map(sg => sg._id.toString());
+
+            if (studentGroupId) {
+                if (!allowedGroupIds.includes(studentGroupId.toString())) {
+                    return res.json({ timetable: [] });
+                }
+                filter.studentGroupId = studentGroupId;
+            } else {
+                filter.studentGroupId = { $in: allowedGroupIds };
+            }
+        } else if (studentGroupId) {
+            filter.studentGroupId = studentGroupId;
         }
 
         const timetable = await Timetable.find(filter)
