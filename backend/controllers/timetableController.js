@@ -21,48 +21,73 @@ const isTimeConflict = (startTime1, endTime1, startTime2, endTime2) => {
     return (start1 < end2 && start2 < end1);
 };
 
-const checkConflicts = async (courseId, studentGroupId, classroomId, teacherId, day, startTime, endTime, excludeTimetableId = null) => {
+const checkConflicts = async (
+    courseId,
+    studentGroupId,
+    classroomId,
+    teacherId,
+    day,
+    startTime,
+    endTime,
+    excludeTimetableId = null,
+    pendingSchedule = []
+) => {
     const conflicts = [];
-    
+
     const query = {
         day,
         $and: [
-            { $or: [
-                { courseId },
-                { studentGroupId },
-                { classroomId },
-                { teacherId }
-            ]}
+            {
+                $or: [
+                    { courseId },
+                    { studentGroupId },
+                    { classroomId },
+                    { teacherId }
+                ]
+            }
         ]
     };
-    
+
     if (excludeTimetableId) {
         query._id = { $ne: excludeTimetableId };
     }
-    
+
     const existingSlots = await Timetable.find(query)
         .populate('courseId', 'name code')
         .populate('studentGroupId', 'name')
         .populate('classroomId', 'name')
         .populate('teacherId', 'name');
-    
-    for (const slot of existingSlots) {
-        if (isTimeConflict(startTime, endTime, slot.startTime, slot.endTime)) {
-            if (slot.courseId._id.toString() === courseId) {
-                conflicts.push(`Course ${slot.courseId.name} already scheduled at this time`);
+
+    // Only consider pending entries for the same day
+    const relevantPending = pendingSchedule.filter(slot => slot.day === day);
+    const allSlots = existingSlots.concat(relevantPending);
+
+    for (const slot of allSlots) {
+        const slotCourseId = slot.courseId?._id ? slot.courseId._id.toString() : slot.courseId?.toString();
+        const slotStudentGroupId = slot.studentGroupId?._id ? slot.studentGroupId._id.toString() : slot.studentGroupId?.toString();
+        const slotClassroomId = slot.classroomId?._id ? slot.classroomId._id.toString() : slot.classroomId?.toString();
+        const slotTeacherId = slot.teacherId?._id ? slot.teacherId._id.toString() : slot.teacherId?.toString();
+
+        if (slot.day === day && isTimeConflict(startTime, endTime, slot.startTime, slot.endTime)) {
+            if (slotCourseId === courseId.toString()) {
+                const name = slot.courseId?.name ? ` ${slot.courseId.name}` : '';
+                conflicts.push(`Course${name} already scheduled at this time`);
             }
-            if (slot.studentGroupId._id.toString() === studentGroupId) {
-                conflicts.push(`Student group ${slot.studentGroupId.name} already has a class at this time`);
+            if (slotStudentGroupId === studentGroupId.toString()) {
+                const name = slot.studentGroupId?.name ? ` ${slot.studentGroupId.name}` : '';
+                conflicts.push(`Student group${name} already has a class at this time`);
             }
-            if (slot.classroomId._id.toString() === classroomId) {
-                conflicts.push(`Classroom ${slot.classroomId.name} is already booked at this time`);
+            if (slotClassroomId === classroomId.toString()) {
+                const name = slot.classroomId?.name ? ` ${slot.classroomId.name}` : '';
+                conflicts.push(`Classroom${name} is already booked at this time`);
             }
-            if (slot.teacherId._id.toString() === teacherId) {
-                conflicts.push(`Teacher ${slot.teacherId.name} already has a class at this time`);
+            if (slotTeacherId === teacherId.toString()) {
+                const name = slot.teacherId?.name ? ` ${slot.teacherId.name}` : '';
+                conflicts.push(`Teacher${name} already has a class at this time`);
             }
         }
     }
-    
+
     return conflicts;
 };
 
@@ -216,7 +241,9 @@ timetableRouter.get("/generate", authenticateToken, authorizeRoles('admin'), asy
                                         course.teacherId._id,
                                         day,
                                         startTime,
-                                        endTime
+                                        endTime,
+                                        null,
+                                        generatedSchedule
                                     );
                                     
                                     if (conflicts.length === 0) {
@@ -351,4 +378,4 @@ timetableRouter.delete("/:id", authenticateToken, authorizeRoles('admin'), async
     }
 });
 
-module.exports = { timetableRouter };
+module.exports = { timetableRouter, checkConflicts };
