@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -10,12 +10,14 @@ import {
 } from '@mui/material';
 import { Schedule, Add, AutoFixHigh } from '@mui/icons-material';
 import { apiClient } from '../services/api';
+import TimetableEditor from '../components/TimetableEditor';
 
 const ManageTimetable = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pageError, setPageError] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleGenerateTimetable = async () => {
     setLoading(true);
@@ -37,6 +39,7 @@ const ManageTimetable = () => {
           schedule: response.data.schedule
         });
         setSuccess(`Timetable generated successfully! ${response.data.totalSlots} slots created.`);
+        setRefreshKey((k) => k + 1);
       } else {
         setError('No timetable slots could be generated. Please check constraints.');
       }
@@ -123,10 +126,10 @@ const ManageTimetable = () => {
               <Schedule sx={{ mr: 1 }} />
               Current Timetable
             </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Timetable view and editing interface will be displayed here.
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Edit individual timetable entries below.
             </Typography>
-            {/* Timetable grid/calendar view would go here */}
+            <TimetableEditor refreshKey={refreshKey} />
           </Paper>
         </Grid>
       </Grid>
