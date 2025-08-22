@@ -7,10 +7,14 @@ const {classroomModel: Classroom} = require('../models/classroom');
 const {studentGroupModel: StudentGroup} = require('../models/studentGroup');
 const {userModel} = require('../models/user');
 const {authenticateToken, authorizeRoles} = require('../middleware/auth');
+const { generateTimeSlots } = require('../utils/timeSlots');
 
-const timeSlots = [
-    '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
-];
+// Default configuration for timetable generation. These values can be
+// overridden via environment variables to customise start/end times or the
+// interval between slots.
+const SLOT_START = process.env.TIMETABLE_START || '09:00';
+const SLOT_END = process.env.TIMETABLE_END || '17:00';
+const SLOT_STEP = parseInt(process.env.TIMETABLE_STEP || '60');
 
 const isTimeConflict = (startTime1, endTime1, startTime2, endTime2) => {
     const start1 = new Date(`1970-01-01T${startTime1}:00`);
@@ -227,7 +231,8 @@ timetableRouter.get("/generate", authenticateToken, authorizeRoles('admin'), asy
                     for (const day of ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']) {
                         if (scheduled) break;
                         
-                        for (const startTime of timeSlots) {
+                        const possibleSlots = generateTimeSlots(SLOT_START, SLOT_END, SLOT_STEP, course.duration);
+                        for (const startTime of possibleSlots) {
                             const endHour = parseInt(startTime.split(':')[0]) + Math.floor(course.duration / 60);
                             const endMinute = parseInt(startTime.split(':')[1]) + (course.duration % 60);
                             const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
