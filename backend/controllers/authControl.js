@@ -4,6 +4,7 @@ const {z}=require('zod');
 const jwt=require('jsonwebtoken');
 const bcrypt=require('bcrypt');
 const {userModel}=require('../models/user');
+const {studentGroupModel: StudentGroup} = require('../models/studentGroup');
 const {authenticateToken, authorizeRoles} = require('../middleware/auth');
 
 const generateToken = (id, role) => {
@@ -118,26 +119,39 @@ authRouter.post("/login", async function(req,res){
         
         const {email,password}=req.body;
         const user=await userModel.findOne({email}).select('+passwordHash');
-        
+
         if(!user || !user.isActive){
             return res.status(401).json({message:"Invalid credentials or inactive account"});
         }
-        
+
         const matchPassword=await bcrypt.compare(password,user.passwordHash);
         if(!matchPassword){
             return res.status(401).json({message:"Invalid credentials"});
         }
-        
+
+        const baseUser = {
+            id: user._id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            department: user.department,
+            employeeId: user.employeeId,
+            rollNo: user.rollNo
+        };
+
+        let studentGroupId;
+        if (user.role === 'student') {
+            const studentGroup = await StudentGroup.findOne({ students: user._id });
+            if (studentGroup) {
+                studentGroupId = studentGroup._id;
+            }
+        }
+
         res.json({
             message:"Login successful",
             user: {
-                id: user._id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                department: user.department,
-                employeeId: user.employeeId,
-                rollNo: user.rollNo
+                ...baseUser,
+                ...(studentGroupId && { studentGroupId })
             },
             token: generateToken(user._id, user.role),
         });
