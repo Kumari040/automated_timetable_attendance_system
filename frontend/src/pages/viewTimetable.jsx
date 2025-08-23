@@ -52,9 +52,8 @@ const ViewTimetable = () => {
       const params = {};
       if (user.role === 'faculty') {
         params.teacherId = user.id;
-      } else if (user.role === 'student') {
-        params.studentGroupId = user.studentGroupId;
       }
+      // For students, don't pass studentGroupId - let backend determine it from user ID
 
       const response = await apiClient.get('/timetable', { params });
       setTimetable(response.data.timetable || []);
