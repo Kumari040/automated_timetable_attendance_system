@@ -187,11 +187,13 @@ dashboardRouter.get("/student", authenticateToken, authorizeRoles('student'), as
         const today = new Date();
         const todayDay = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][today.getDay()];
 
-        // Get student data from student model to find studentGroupId
-        const studentData = await studentModel.findOne({ rollNo: req.user.rollNo });
-        const studentGroupId = studentData?.studentGroupId;
+        // Find student group that contains this user
+        const studentGroup = await require('../models/studentGroup').studentGroupModel
+            .findOne({ 
+                students: req.user._id
+            });
         
-        if (!studentGroupId) {
+        if (!studentGroup) {
             // Return empty dashboard data if student not assigned to group yet
             return res.json({
                 todayClasses: [],
@@ -200,6 +202,8 @@ dashboardRouter.get("/student", authenticateToken, authorizeRoles('student'), as
                 attendanceSummary: []
             });
         }
+
+        const studentGroupId = studentGroup._id;
 
         const [
             todayClasses,

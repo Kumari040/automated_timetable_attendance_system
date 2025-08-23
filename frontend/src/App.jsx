@@ -20,6 +20,7 @@ import ManageAttendance from "./pages/manageAttendance";
 import ViewTimetable from "./pages/viewTimetable";
 import ViewAttendance from "./pages/viewAttendance";
 import Profile from "./pages/profile";
+import AdvancedTimetableGeneration from "./pages/advancedTimetableGeneration";
 
 const theme = createTheme({
   palette: {
@@ -48,6 +49,7 @@ function App() {
               <Route path="users" element={<ManageUsers />} />
               <Route path="courses" element={<ManageCourses />} />
               <Route path="timetable" element={<ManageTimetable />} />
+              <Route path="advanced-timetable" element={<AdvancedTimetableGeneration />} />
               <Route path="attendance" element={<ManageAttendance />} />
               <Route path="profile" element={<Profile />} />
             </Route>
