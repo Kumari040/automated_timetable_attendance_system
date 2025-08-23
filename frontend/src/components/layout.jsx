@@ -27,8 +27,7 @@ import {
   Assignment,
   Person,
   Logout,
-  Class,
-  Science
+  Class
 } from '@mui/icons-material';
 import { useAuth } from '../context/authContext';
 
@@ -71,7 +70,6 @@ const Layout = () => {
         { text: 'Manage Users', icon: <People />, path: `${basePath}/users` },
         { text: 'Manage Courses', icon: <School />, path: `${basePath}/courses` },
         { text: 'Manage Timetable', icon: <Schedule />, path: `${basePath}/timetable` },
-        { text: 'Advanced Generation', icon: <Science />, path: `${basePath}/advanced-timetable` },
         { text: 'Manage Attendance', icon: <Assignment />, path: `${basePath}/attendance` },
         ...commonItems.slice(1)
       ];
