@@ -8,6 +8,7 @@ const {studentGroupModel: StudentGroup} = require('../models/studentGroup');
 const {userModel} = require('../models/user');
 const {authenticateToken, authorizeRoles} = require('../middleware/auth');
 const { generateTimeSlots } = require('../utils/timeSlots');
+const { checkCountConstraints } = require('../utils/constraints');
 
 // Default configuration for timetable generation. These values can be
 // overridden via environment variables to customise start/end times or the
@@ -90,6 +91,16 @@ const checkConflicts = async (
     // Only consider pending entries for the same day
     const relevantPending = pendingSchedule.filter(slot => slot.day === day);
     const allSlots = existingSlots.concat(relevantPending);
+    const allSlotsWithNew = allSlots.concat([
+        { courseId, studentGroupId, classroomId, teacherId }
+    ]);
+
+    const limitConflicts = checkCountConstraints(allSlotsWithNew, {
+        teacherId,
+        studentGroupId,
+        classroomId
+    });
+    conflicts.push(...limitConflicts);
 
     for (const slot of allSlots) {
         const slotCourseId = slot.courseId?._id ? slot.courseId._id.toString() : slot.courseId?.toString();
