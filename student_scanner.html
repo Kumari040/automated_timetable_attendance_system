@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Attendance Scanner</title>
+    <!-- Using Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for a nicer font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            /* --- NEW: Classroom Background Image --- */
+            background-image: url('https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=2532&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        #qr-reader {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .scanner-icon {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.7;
+            }
+        }
+        .status-icon {
+            width: 50px;
+            height: 50px;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4 transform transition-all duration-500">
+        
+        <!-- Student ID Input Section -->
+        <div id="student-id-section">
+            <div class="text-center mb-6">
+                <svg class="scanner-icon mx-auto h-16 w-16 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.5a3 3 0 00-3 3v10.5a3 3 0 003 3h10.5a3 3 0 003-3V7.5a3 3 0 00-3-3H3.75zM10.5 8.25v2.25a2.25 2.25 0 004.5 0V8.25a2.25 2.25 0 00-4.5 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <h1 class="text-2xl font-bold text-gray-800 mt-4">Attendance Scanner</h1>
+                <p class="text-gray-600 text-sm mt-1">Step 1: Scan the QR Code</p>
+            </div>
+            <div>
+                <label for="studentId" class="block text-sm font-medium text-gray-700 mb-2">Student ID</label>
+                <input type="text" id="studentId" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition" placeholder="e.g., S12345">
+                <button id="start-scan-btn" class="mt-5 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200 ease-in-out shadow-lg hover:shadow-indigo-500/50">
+                    Start Scanner
+                </button>
+            </div>
+        </div>
+
+        <!-- QR Scanner Section -->
+        <div id="scanner-section" class="hidden text-center">
+            <h1 class="text-2xl font-bold text-gray-800 mb-4">Point Camera at QR Code</h1>
+            <div id="qr-reader" class="w-full shadow-inner"></div>
+            <div id="qr-reader-results" class="mt-4 text-gray-700 font-semibold bg-gray-100 p-3 rounded-lg min-h-[80px] flex items-center justify-center"></div>
+            <button id="reset-btn" class="hidden mt-4 text-sm text-gray-600 hover:text-indigo-600">Scan again</button>
+            
+            <button id="face-verify-btn" class="hidden mt-5 w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200 ease-in-out shadow-lg hover:shadow-green-500/50">
+                Proceed to Face Verification
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
+
+    <script>
+        const studentIdSection = document.getElementById('student-id-section');
+        const scannerSection = document.getElementById('scanner-section');
+        const startScanBtn = document.getElementById('start-scan-btn');
+        const studentIdInput = document.getElementById('studentId');
+        const resultContainer = document.getElementById('qr-reader-results');
+        const resetBtn = document.getElementById('reset-btn');
+        const faceVerifyBtn = document.getElementById('face-verify-btn');
+
+        const SERVER_URL = "http://127.0.0.1:5000/mark_attendance";
+        let hasScanned = false;
+
+        function onScanSuccess(decodedText, decodedResult) {
+            if (hasScanned) return;
+            hasScanned = true;
+            
+            const studentId = studentIdInput.value;
+            resultContainer.innerHTML = `<div class="flex items-center justify-center text-blue-600"><svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Scan successful! Sending...</span></div>`;
+            
+            html5QrcodeScanner.clear().catch(error => console.error("Failed to clear scanner.", error));
+            markAttendance(decodedText, studentId);
+        }
+
+        async function markAttendance(token, studentId) {
+            try {
+                const response = await fetch(SERVER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: token, student_id: studentId }),
+                });
+                const data = await response.json();
+
+                if (data.status === 'success' || data.status === 'already_marked') {
+                    resultContainer.innerHTML = `<div class="flex flex-col items-center text-green-600"><svg class="status-icon mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span>${data.message}</span></div>`;
+                    faceVerifyBtn.classList.remove('hidden');
+                } else {
+                    resultContainer.innerHTML = `<div class="flex flex-col items-center text-red-600"><svg class="status-icon mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg><span>${data.message}</span></div>`;
+                    resetBtn.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error sending data to server:', error);
+                resultContainer.innerHTML = `<div class="flex flex-col items-center text-red-600"><svg class="status-icon mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg><span>Connection Error.</span></div>`;
+                resetBtn.classList.remove('hidden');
+            }
+        }
+        
+        function resetScanner() {
+            hasScanned = false;
+            resetBtn.classList.add('hidden');
+            faceVerifyBtn.classList.add('hidden');
+            resultContainer.innerHTML = `<span>Point camera at the QR code...</span>`;
+            html5QrcodeScanner.render(onScanSuccess);
+        }
+
+        const html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: { width: 250, height: 250 }, facingMode: "environment" }, false);
+
+        startScanBtn.addEventListener('click', () => {
+            const studentId = studentIdInput.value;
+            if (!studentId) {
+                alert("Please enter your Student ID first.");
+                return;
+            }
+            studentIdSection.classList.add('hidden');
+            scannerSection.classList.remove('hidden');
+            resetScanner();
+        });
+        
+        resetBtn.addEventListener('click', resetScanner);
+
+        faceVerifyBtn.addEventListener('click', () => {
+            const studentId = studentIdInput.value;
+            window.location.href = `face_verification.html?studentId=${encodeURIComponent(studentId)}`;
+        });
+
+    </script>
+
+</body>
+</html>
