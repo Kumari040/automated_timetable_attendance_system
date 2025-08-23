@@ -16,6 +16,10 @@ const { checkCountConstraints } = require('../utils/constraints');
 const SLOT_START = process.env.TIMETABLE_START || '09:00';
 const SLOT_END = process.env.TIMETABLE_END || '17:00';
 const SLOT_STEP = parseInt(process.env.TIMETABLE_STEP || '60');
+// When enabled, the generator logs every conflict it encounters so admins can
+// understand why slots are rejected. This can be toggled via an environment
+// variable to avoid noisy logs in production.
+const TIMETABLE_DEBUG = process.env.TIMETABLE_DEBUG === 'true';
 
 const isTimeConflict = (startTime1, endTime1, startTime2, endTime2) => {
     const start1 = new Date(`1970-01-01T${startTime1}:00`);
@@ -141,6 +145,13 @@ const checkConflicts = async (
     if (studentGroup && !isWithinAvailability(studentGroup, day, startTime, endTime)) {
         const name = studentGroup.name ? ` ${studentGroup.name}` : '';
         conflicts.push(`Student group${name} is not available at this time`);
+    }
+
+    if (conflicts.length > 0 && TIMETABLE_DEBUG) {
+        console.warn(
+            `Conflict for course ${courseId} (group ${studentGroupId}) in classroom ${classroomId} with teacher ${teacherId} on ${day} at ${startTime}-${endTime}:`,
+            conflicts
+        );
     }
 
     return conflicts;
@@ -295,21 +306,26 @@ timetableRouter.get("/generate", authenticateToken, authorizeRoles('admin'), asy
 
         const classrooms = await Classroom.find({ isActive: true });
         const generatedSchedule = [];
+        // Collect unscheduled attempts when debug mode is active to help admins
+        // understand why generation produced no slots.
+        const debugMode = TIMETABLE_DEBUG || req.query.debug === 'true';
+        const debugInfo = [];
 
         for (const course of courses) {
             for (const studentGroup of course.studentGroups) {
                 for (let i = 0; i < course.frequency; i++) {
                     let scheduled = false;
-                    
+                    let lastConflicts = [];
+
                     for (const day of ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']) {
                         if (scheduled) break;
-                        
+
                         const possibleSlots = generateTimeSlots(SLOT_START, SLOT_END, SLOT_STEP, course.duration);
                         for (const startTime of possibleSlots) {
                             const endHour = parseInt(startTime.split(':')[0]) + Math.floor(course.duration / 60);
                             const endMinute = parseInt(startTime.split(':')[1]) + (course.duration % 60);
                             const endTime = `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
-                            
+
                             for (const classroom of classrooms) {
                                 if (classroom.capacity >= studentGroup.size) {
                                     const conflicts = await checkConflicts(
@@ -324,7 +340,7 @@ timetableRouter.get("/generate", authenticateToken, authorizeRoles('admin'), asy
                                         generatedSchedule,
                                         { teacher: course.teacherId, classroom, studentGroup }
                                     );
-                                    
+
                                     if (conflicts.length === 0) {
                                         const scheduleEntry = {
                                             courseId: course._id,
@@ -339,15 +355,26 @@ timetableRouter.get("/generate", authenticateToken, authorizeRoles('admin'), asy
                                             semester: parseInt(semester),
                                             academicYear
                                         };
-                                        
+
                                         generatedSchedule.push(scheduleEntry);
                                         scheduled = true;
                                         break;
+                                    } else {
+                                        lastConflicts = conflicts;
                                     }
                                 }
                             }
                             if (scheduled) break;
                         }
+                    }
+
+                    if (!scheduled && debugMode) {
+                        debugInfo.push({
+                            courseId: course._id.toString(),
+                            studentGroupId: studentGroup._id.toString(),
+                            teacherId: course.teacherId._id.toString(),
+                            conflicts: lastConflicts
+                        });
                     }
                 }
             }
@@ -356,7 +383,8 @@ timetableRouter.get("/generate", authenticateToken, authorizeRoles('admin'), asy
         res.json({
             message: "Timetable generated successfully",
             schedule: generatedSchedule,
-            totalSlots: generatedSchedule.length
+            totalSlots: generatedSchedule.length,
+            conflicts: debugMode ? debugInfo : undefined
         });
     } catch (error) {
         console.error('Timetable generation error:', error);
